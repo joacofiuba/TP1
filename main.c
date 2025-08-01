@@ -7,9 +7,10 @@
 
 
 #include "cola.h"
+#include "pila.h"
 
 // Clasificación
-enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS};
+enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
 
 // Tabla de búsqueda
 enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
@@ -124,7 +125,7 @@ cola_t *cola_de_entrada(const char *linea) {
 
         if(linea[i] == '('){
             balance_parentesis++;
-            aux->t = PARENTESIS;
+            aux->t = PARENTESIS_ABIERTO;
             aux->s[j++] = linea[i++];
             aux->s[j] = '\0';
             cola_encolar(entrada, aux);
@@ -138,7 +139,7 @@ cola_t *cola_de_entrada(const char *linea) {
                 cola_destruir(entrada, destruir_simbolo); //TERMINAR
                 return NULL;
             }
-            aux->t = PARENTESIS;
+            aux->t = PARENTESIS_CERRADO;
             aux->s[j++] = linea[i++];
             aux->s[j] = '\0';
             cola_encolar(entrada, aux);
@@ -170,4 +171,104 @@ cola_t *cola_de_entrada(const char *linea) {
         }
 
     return entrada;
+}
+
+
+cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion postfija (shunting yard)
+    cola_t *salida = cola_crear();
+    if(salida == NULL) return NULL;
+    pila_t *pila = pila_crear();
+    if(pila == NULL){
+        cola_destruir(salida, destruir_simbolo);
+        return NULL;
+    }
+    struct simbolo *aux;
+    while((aux = cola_desencolar(entrada)) != NULL){
+        if(aux->t == ENTERO || aux->t == RACIONAL){
+            if(!cola_encolar(salida, aux)){
+                cola_destruir(salida, destruir_simbolo);
+                pila_destruir(pila, destruir_simbolo);
+                destruir_simbolo(aux);
+                return NULL;
+            }
+        }
+        else if(aux->t == FUNCION){
+            if(!pila_apilar(pila, aux)){
+                cola_destruir(salida, destruir_simbolo);
+                pila_destruir(pila, destruir_simbolo);
+                destruir_simbolo(aux);
+                return NULL;
+            }
+        }
+        else if(aux->t == OPERADOR){
+            
+            while(!pila_esta_vacia(pila)){
+                struct simbolo *pila_tope = pila_ver_tope(pila);
+                if(pila_tope->t == FUNCION || pila_tope->indice_tipo >= aux->indice_tipo){
+                    if(!cola_encolar(salida, pila_desapilar(pila))){
+                        cola_destruir(salida, destruir_simbolo);
+                        pila_destruir(pila, destruir_simbolo);
+                        destruir_simbolo(aux);
+                        return NULL;
+                    }
+                }
+                else{
+                    break;
+                }
+            }
+
+            if(!pila_apilar(pila, aux)){
+                cola_destruir(salida, destruir_simbolo);
+                pila_destruir(pila, destruir_simbolo);
+                destruir_simbolo(aux);
+                return NULL;
+            }
+        }
+
+        else if(aux->t == PARENTESIS_ABIERTO){
+            if(!pila_apilar(pila, aux)){
+                cola_destruir(salida, destruir_simbolo);
+                pila_destruir(pila, destruir_simbolo);
+                destruir_simbolo(aux);
+                return NULL;
+            }
+        }
+        else if(aux->t == PARENTESIS_CERRADO){
+            while(!pila_esta_vacia(pila)){
+                struct simbolo *pila_tope = pila_ver_tope(pila);
+                if(pila_tope->t == PARENTESIS_ABIERTO){
+                    destruir_simbolo(pila_desapilar(pila)); //descarto el (
+                    break;                 
+                }
+                
+                if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
+                    cola_destruir(salida, destruir_simbolo);
+                    pila_destruir(pila, destruir_simbolo);
+                    destruir_simbolo(aux);
+                    return NULL;
+                }
+                
+            }
+            struct simbolo *pila_tope = pila_ver_tope(pila);
+            if(pila_tope != NULL && pila_tope->t == FUNCION){
+                if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
+                    cola_destruir(salida, destruir_simbolo);
+                    pila_destruir(pila, destruir_simbolo);
+                    destruir_simbolo(aux);
+                    return NULL;
+                }
+            }
+        }   
+    }
+    while(!pila_esta_vacia(pila)){
+        if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
+            cola_destruir(salida, destruir_simbolo);
+            pila_destruir(pila, destruir_simbolo);
+            return NULL;
+        }
+    }
+    pila_destruir(pila, destruir_simbolo);
+
+    return salida;
+
 }
