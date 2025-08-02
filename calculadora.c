@@ -6,16 +6,8 @@
 #define CHAR_MAX 128  
 
 #include "calculadora.h"
-#include "cola.h"
-#include "pila.h"
 #include "ej1.h" //uso la funcion para pasar de binario a bcd
 
-
-// Clasificación
-enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
-
-// Tabla de búsqueda
-enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
 const char *funciones[] = {
     [FACT] = "fact",
     [ABS] = "abs",
@@ -24,7 +16,7 @@ const char *funciones[] = {
     [EULER] = "e",
     [PHI] = "phi"
 };
-enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO, OP_INDEFINIDO};
+
 const char *operadores[] = {
     [SUMA] = "+",
     [RESTA] = "-",
@@ -32,6 +24,16 @@ const char *operadores[] = {
     [DIVISION] = "/",
     [POTENCIA] = "^",
     [CAMBIO_SIGNO] = "_",
+};
+
+
+
+struct simbolo {
+    char s[CHAR_MAX];
+    enum tipo t;
+    size_t indice_tipo; //solo se usa con operadores y funciones (enumerativos). en los operadores sirve para la prioridad  
+    size_t cant_parametros; //sirve solo para las funciones
+    size_t aridad; //sirve solo para los operadores
 };
 
 //tabla de busqueda general
@@ -44,16 +46,6 @@ size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantid
     return cantidad; //DEVUELVE INDEFINIDO EN CASO DE QUE NO ESTE
 }
 
-
-
-
-struct simbolo {
-    char s[CHAR_MAX];
-    enum tipo t;
-    size_t indice_tipo; //solo se usa con operadores y funciones (enumerativos). en los operadores sirve para la prioridad  
-    size_t cant_parametros; //sirve solo para las funciones
-    size_t aridad; //sirve solo para los operadores
-};
 
 void destruir_simbolo(void *dato) {
     struct simbolo *simbolo = dato;

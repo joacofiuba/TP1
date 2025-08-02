@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "calculadora.h"
-#include "cola.h"
 
 #define MAX_LINEA 256
 

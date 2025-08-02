@@ -2,67 +2,22 @@
 #define CALCULADORA_H
 
 #include <stdio.h>
-#include "cola.h"
-#include "pila.h"
+#include "tdas/cola.h"
+#include "tdas/pila.h"
 // Clasificación
 enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
-
 // Tabla de búsqueda
 enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
-const char *funciones[] = {
-    [FACT] = "fact",
-    [ABS] = "abs",
-    [INV] = "inv",
-    [PI] = "pi",
-    [EULER] = "e",
-    [PHI] = "phi"
-};
 enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO, OP_INDEFINIDO};
-const char *operadores[] = {
-    [SUMA] = "+",
-    [RESTA] = "-",
-    [PRODUCTO] = "*",
-    [DIVISION] = "/",
-    [POTENCIA] = "^",
-    [CAMBIO_SIGNO] = "_",
-};
 
-//tabla de busqueda general
-size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad){ //en cantidad mandarias OP_INDEFINIDO o FUNC_INDEFINIDO
-    for(size_t i=0; i < cantidad; i++){
-        if(!strcmp(s, opciones[i])){
-            return i;
-        }
-    }
-    return cantidad; //DEVUELVE INDEFINIDO EN CASO DE QUE NO ESTE
-}
+struct simbolo; 
 
-
-
-
-struct simbolo {
-    char s[CHAR_MAX];
-    enum tipo t;
-    size_t indice_tipo; //solo se usa con operadores y funciones (enumerativos). en los operadores sirve para la prioridad  
-    size_t cant_parametros; //sirve solo para las funciones
-    size_t aridad; //sirve solo para los operadores
-};
 
 void limpiar_todo(cola_t *salida, pila_t *pila, struct simbolo *aux);
 
 void destruir_simbolo(void *dato);
 
-enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
-
-enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
-
-const char *funciones[];
-enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO, OP_INDEFINIDO};
-const char *operadores[];
-
 void destruir_arreglo_simbolos(struct simbolo **arreglo, size_t cantidad);
-
-
 
 size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad);
 

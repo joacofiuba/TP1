@@ -1,30 +1,24 @@
-CC = gcc
 CFLAGS = -Wall -Werror -std=c99 -pedantic -g
-LDFLAGS = -lm
-
-# Archivos objeto
-OBJ = main.o cola.o calculadora.o pila.o
-
+LFLAGS = -lm
 # Regla principal
 all: calculadora
 
-# Enlazado final
-calculadora: $(OBJ)
-	$(CC) $(OBJ) -o calculadora $(LDFLAGS)
 
-# Compilación individual
-main.o: main.c cola.h calculadora.h pila.h
-	$(CC) $(CFLAGS) -c main.c
+calculadora: main.o cola.o pila.o calculadora.o
+	gcc main.o cola.o pila.o calculadora.o -o $(LFLAGS)
 
-calculadora.o: calculadora.c calculadora.h cola.h pila.h
-	$(CC) $(CFLAGS) -c calculadora.c
+main.o: main.c tdas/cola.h tdas/pila.h calculadora.h
+	gcc main.c -c $(CFLAGS)
 
-cola.o: cola.c cola.h
-	$(CC) $(CFLAGS) -c cola.c
+calculadora.o: calculadora.c tdas/cola.h tdas/pila.h calculadora.h
+	gcc calculadora.c -c $(CFLAGS)
 
-pila.o: pila.c pila.h
-	$(CC) $(CFLAGS) -c pila.c
+cola.o: tdas/cola.c tdas/cola.h
+	gcc cola.c -c $(CFLAGS)
+
+pila.o: tdas/pila.c tdas/pila.h
+	gcc pila.c -c $(CFLAGS)
 
 # Limpieza
 clean:
-	del /Q *.o calculadora.exe 2>nul
+	rm *.o calculadora
