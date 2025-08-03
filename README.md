@@ -48,13 +48,13 @@ la lógica en la postfija se complicaba bastante.
 `#define CANT_OPERADORES 6`
 `#define CANT_FUNCIONES 6`
 
-así elimine los enumerativos que habian al final que eran medio raros,
-en la función de busqueda genérica se usa como parametro cantidad esos 
-define
+así eliminé los enumerativos que habian al final que eran medio raros,
+en la función `cadena_a_enumerativo` se usa como parametro "cantidad" esos 
+#define
 
-3. Cambié el nombre de la función `limpiar_todo()` por `free_all()`
+4. Cambié el nombre de la función `limpiar_todo()` por `free_all()`
 
-4. Solucioné las fugas de memoria, el problema principal estaba en no 
+5. Solucioné las fugas de memoria, el problema principal estaba en no 
 destruir los simbolos al ir desencolando para imprimir en el main.
 Ojo con eso, si no destruis o guardas el puntero al desencolar perdes
 la memoria. Creo que igual lo sabias pq en la postfija no hay fugas
