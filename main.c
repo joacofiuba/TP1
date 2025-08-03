@@ -1,25 +1,29 @@
-
-
-#define MAX_LINEA 256
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <string.h>   
 
-
 #include "tdas/cola.h"
 #include "tdas/pila.h"
+#include "tdas/racional.h"
+#include "tdas/entero.h"
 
 #include "ej1.h" //uso la funcion para pasar de binario a bcd
 
+
+#define MAX_LINEA 256
+#define CADENA_CORTA 8
+#define CANT_OPERADORES 6
+#define CANT_FUNCIONES 6
+
+
 // Clasificación
 enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
-enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
-enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO, OP_INDEFINIDO};
+enum funcion {FACT, ABS, INV, PI, EULER, PHI};
+enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO};
 
-
+// tablas de busqueda
 const char *funciones[] = {
     [FACT] = "fact",
     [ABS] = "abs",
@@ -28,6 +32,15 @@ const char *funciones[] = {
     [EULER] = "e",
     [PHI] = "phi"
 };
+
+const size_t funcion_parametros[] = {
+    [FACT] = 1,
+    [ABS] = 1,
+    [INV] = 1,
+    [PI] = 0,
+    [EULER] = 0,
+    [PHI] = 0
+}; 
 
 const char *operadores[] = {
     [SUMA] = "+",
@@ -38,15 +51,24 @@ const char *operadores[] = {
     [CAMBIO_SIGNO] = "_",
 };
 
+const size_t operador_aridad[] = {
+    [SUMA] = 2,
+    [RESTA] = 2,
+    [PRODUCTO] = 2,
+    [DIVISION] = 2,
+    [POTENCIA] = 2,
+    [CAMBIO_SIGNO] = 1
+};
 
-
+// Invariante: 0 <= t <= 5
+// indice se inicializa <=>  tipo == OPERADOR || FUNCION
 struct simbolo {
     char s[MAX_LINEA];
     enum tipo t;
-    size_t indice_tipo; //solo se usa con operadores y funciones (enumerativos). en los operadores sirve para la prioridad  
-    size_t cant_parametros; //sirve solo para las funciones
-    size_t aridad; //sirve solo para los operadores
-};
+    size_t indice; // solo es util para simbolos de tipo OPERADOR o FUNCION!
+ };
+
+
 
 struct simbolo *calculadora_suma(struct simbolo **arreglo_simbolos);
 struct simbolo *calculadora_resta(struct simbolo **arreglo_simbolos);
@@ -61,14 +83,14 @@ struct simbolo *calculadora_pi(struct simbolo **arreglo_simbolos);
 struct simbolo *calculadora_phi(struct simbolo **arreglo_simbolos);
 struct simbolo *calculadora_euler(struct simbolo **arreglo_simbolos);
 
-//tabla de busqueda generica
+// busqueda generica
 size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad){ //en cantidad mandarias OP_INDEFINIDO o FUNC_INDEFINIDO
-    for(size_t i=0; i < cantidad; i++){
+    for(size_t i = 0; i < cantidad; i++){
         if(!strcmp(s, opciones[i])){
             return i;
         }
     }
-    return cantidad; //DEVUELVE INDEFINIDO EN CASO DE QUE NO ESTE
+    return cantidad + 1; // devuelve un valor fuera del rango del indice, indicando que no se encuentra en la tabla de busqueda
 }
 
 
@@ -80,7 +102,7 @@ void destruir_simbolo(void *dato) {
 
 cola_t *cola_de_entrada(const char *linea) {
     cola_t *entrada = cola_crear();
-    size_t i = 0, balance_parentesis = 0;
+    size_t i = 0, j = 0, balance_parentesis = 0;
     
 
     while(linea[i] != '\0') {
@@ -91,25 +113,22 @@ cola_t *cola_de_entrada(const char *linea) {
 
         struct simbolo *aux = malloc(sizeof(struct simbolo));
         if(aux== NULL) return NULL;
-        size_t j = 0; // Para llenar aux->s
-        
-        //bool en_simbolo = false;
+        j = 0; // Para llenar aux->s
 
         // Número entero o racional
         if (isdigit(linea[i])) {
             aux->t = ENTERO;
             aux->s[j++] = linea[i++];
-            while (isdigit(linea[i])) {
+            while(isdigit(linea[i])) {
                 aux->s[j++] = linea[i++];
             }
 
             // Detectar racional (con punto)
             if (linea[i] == '.' && isdigit(linea[i + 1])) {
                 aux->s[j++] = linea[i++]; // incluir el punto
-                while (isdigit(linea[i])) {
-                    aux->s[j++] = linea[i++];
-                }
                 aux->t = RACIONAL;
+                while(isdigit(linea[i]))
+                    aux->s[j++] = linea[i++];
             }
 
             aux->s[j] = '\0';
@@ -119,34 +138,26 @@ cola_t *cola_de_entrada(const char *linea) {
 
         // Función: secuencia de letras
         if (isalpha(linea[i])) {
-            while (isalpha(linea[i])) {
-                aux->s[j++] = linea[i++];
-            }
-            aux->s[j] = '\0';
             aux->t = FUNCION;
-            size_t indice_funcion = cadena_a_enumerativo(aux->s, funciones, FUNC_INDEFINIDO);
-            if (indice_funcion == FUNC_INDEFINIDO) {
+            while(isalpha(linea[i]))
+                aux->s[j++] = linea[i++];
+            aux->s[j] = '\0';
+                        
+            size_t indice_funcion = cadena_a_enumerativo(aux->s, funciones, CANT_FUNCIONES);
+            if (indice_funcion > CANT_FUNCIONES) { // => no existe la función
                 fprintf(stderr, "Error: función desconocida: %s\n", aux->s);
                 free(aux);
-                cola_destruir(entrada, destruir_simbolo); //crear una funcion para destruir cada elemento de la cola
+                cola_destruir(entrada, free); //crear una funcion para destruir cada elemento de la cola
                 return NULL;
             }
-            else{
-                aux->indice_tipo = indice_funcion;
-            }
-            
-            if(indice_funcion >= FACT && indice_funcion <= INV) aux->cant_parametros = 1;
-            else if(indice_funcion >= PI && indice_funcion <= PHI) aux->cant_parametros = 0;
 
+            aux->indice = indice_funcion;
             cola_encolar(entrada, aux);
             continue;
         }
 
-       
-       
 
         // Paréntesis
-
         if(linea[i] == '('){
             balance_parentesis++;
             aux->t = PARENTESIS_ABIERTO;
@@ -158,7 +169,7 @@ cola_t *cola_de_entrada(const char *linea) {
         if(linea[i] == ')'){
             balance_parentesis--;
             if(balance_parentesis < 0){
-                fprintf(stderr, "Se está cerrando un paréntesis que nunca se abrió!");
+                fprintf(stderr, "¡Se está cerrando un paréntesis que nunca se abrió!");
                 free(aux);
                 cola_destruir(entrada, destruir_simbolo); //TERMINAR
                 return NULL;
@@ -169,39 +180,40 @@ cola_t *cola_de_entrada(const char *linea) {
             cola_encolar(entrada, aux);
             continue;
         }
-        
 
         //si no es ninguno de los anteriores, deberia ser un operador 
         aux->t = OPERADOR;
         aux->s[j++] = linea[i++];
         aux->s[j] = '\0';
-        size_t indice_operador = cadena_a_enumerativo(aux->s, operadores, OP_INDEFINIDO);
-        if(indice_operador == OP_INDEFINIDO){
-            free(aux);
-            fprintf(stderr, "XDDD");//completar
+
+        size_t indice_operador = cadena_a_enumerativo(aux->s, operadores, CANT_OPERADORES);
+        if(indice_operador > CANT_OPERADORES){
+            free(aux);  
+            fprintf(stderr, "Ingrese una linea con caracteres válidos");
             cola_destruir(entrada, destruir_simbolo ); 
             return NULL;
         }
-        aux->indice_tipo = indice_operador;
-        if(indice_operador >= SUMA && indice_operador <= POTENCIA) aux->aridad = 2;
-        else if(indice_operador == CAMBIO_SIGNO) aux->aridad = 1;
+
+        // if(indice_operador >= SUMA && indice_operador <= POTENCIA) aux->aridad = 2; // NO DEBERAI SER NECESARIO JEJEJE
+        // else if(indice_operador == CAMBIO_SIGNO) aux->aridad = 1;
+        
+        aux->indice = indice_operador; 
         cola_encolar(entrada, aux);
 
     } //aca termina el while principal
 
-        //Si no se cierra el parentesis
-        if(balance_parentesis != 0){
-            fprintf(stderr, "Falta cerrar un paréntesis");
-            cola_destruir(entrada, destruir_simbolo);
-            return NULL;
-        }
+     //Si no se cierra el parentesis
+    if(balance_parentesis != 0){
+        fprintf(stderr, "Falta cerrar un paréntesis \n");
+        cola_destruir(entrada, destruir_simbolo);
+        return NULL;
+    }
 
     return entrada;
 }
 
 //FUNCION AUXILIAR PARA LIBERAR MEMORIA EN CASO DE FALLA
-
-void limpiar_todo(cola_t *salida, pila_t *pila, struct simbolo *aux) {
+void free_all(cola_t *salida, pila_t *pila, struct simbolo *aux) {
     if (salida != NULL) {
         cola_destruir(salida, destruir_simbolo);
     }
@@ -217,49 +229,50 @@ void limpiar_todo(cola_t *salida, pila_t *pila, struct simbolo *aux) {
 cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion postfija (shunting yard)
     cola_t *salida = cola_crear();
     if(salida == NULL) return NULL;
+
     pila_t *pila = pila_crear();
     if(pila == NULL){
         cola_destruir(salida, destruir_simbolo);
         return NULL;
     }
+
     struct simbolo *aux;
     while((aux = cola_desencolar(entrada)) != NULL){
-        if(aux->t == ENTERO || aux->t == RACIONAL){
+        if(aux->t == ENTERO || aux->t == RACIONAL){ // si es nro va cola de salida
             if(!cola_encolar(salida, aux)){
-                limpiar_todo(salida, pila, aux);
+                free_all(salida, pila, aux);
                 return NULL;
             }
         }
-        else if(aux->t == FUNCION){
+
+        else if(aux->t == FUNCION){ // si es función apila
             if(!pila_apilar(pila, aux)){
-                limpiar_todo(salida, pila, aux);
+                free_all(salida, pila, aux);
                 return NULL;
             }
         }
+
         else if(aux->t == OPERADOR){
-            
             while(!pila_esta_vacia(pila)){
                 struct simbolo *pila_tope = pila_ver_tope(pila);
-                if(pila_tope->t == FUNCION || (pila_tope->t == OPERADOR && pila_tope->indice_tipo >= aux->indice_tipo)){
+                if(pila_tope->t == FUNCION || (pila_tope->t == OPERADOR && pila_tope->indice >= aux->indice)){
                     if(!cola_encolar(salida, pila_desapilar(pila))){
-                        limpiar_todo(salida, pila, aux);
+                        free_all(salida, pila, aux);
                         return NULL;
                     }
                 }
-                else{
-                    break;
-                }
+                else break;
             }
 
             if(!pila_apilar(pila, aux)){
-                limpiar_todo(salida, pila, aux);
+                free_all(salida, pila, aux);
                 return NULL;
             }
         }
 
         else if(aux->t == PARENTESIS_ABIERTO){
             if(!pila_apilar(pila, aux)){
-                limpiar_todo(salida, pila, aux);
+                free_all(salida, pila, aux);
                 return NULL;
             }
         }
@@ -272,7 +285,7 @@ cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion post
                 }
                 
                 if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
-                    limpiar_todo(salida, pila, aux);
+                    free_all(salida, pila, aux);
                     return NULL;
                 }
                 
@@ -280,7 +293,7 @@ cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion post
             struct simbolo *pila_tope = pila_ver_tope(pila);
             if(pila_tope != NULL && pila_tope->t == FUNCION){
                 if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
-                    limpiar_todo(salida, pila, aux);
+                    free_all(salida, pila, aux);
                     return NULL;
                 }
             }
@@ -288,7 +301,7 @@ cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion post
     }
     while(!pila_esta_vacia(pila)){
         if(!cola_encolar(salida, pila_desapilar(pila))){ //paso de la pila a la cola
-            limpiar_todo(salida, pila, aux);
+            free_all(salida, pila, aux);
             return NULL;
         }
     }
@@ -456,7 +469,6 @@ int main(){
         printf("error al armar cola de entrada\n");
         return 1;
     }
-
    
     //voy a desencolar la cola en infija para chequear los resultados
     printf("COLA DE ENTRADA:\n");
@@ -466,16 +478,25 @@ int main(){
         printf("%s\n", elemento_cola_entrada->s);
     }
     */
+
     cola_t *cola_postfija = cola_de_salida(cola_infija);
     if(cola_postfija == NULL){
         printf("error al armar cola de salida\n");
         return 1;
     }
     printf("COLA DE SALIDA:\n");
+    
+
     struct simbolo *elemento_cola_salida;
     while((elemento_cola_salida = cola_desencolar(cola_postfija)) != NULL){
         printf("%s\n", elemento_cola_salida->s);
+        destruir_simbolo(elemento_cola_salida);
     }
-    printf("termine je\n");
+
+    cola_destruir(cola_infija, free);
+
+    cola_destruir(cola_postfija, free);
+
+    printf("\n");
     return 0;
 }
