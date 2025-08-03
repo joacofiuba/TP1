@@ -4,14 +4,13 @@ LFLAGS = -lm
 all: calculadora
 
 
-calculadora: main.o cola.o pila.o calculadora.o
-	gcc main.o cola.o pila.o calculadora.o -o $(LFLAGS)
+calculadora: main.o cola.o pila.o 
+	gcc main.o cola.o pila.o -o calculadora $(LFLAGS)
 
 main.o: main.c tdas/cola.h tdas/pila.h calculadora.h
 	gcc main.c -c $(CFLAGS)
 
-calculadora.o: calculadora.c tdas/cola.h tdas/pila.h calculadora.h
-	gcc calculadora.c -c $(CFLAGS)
+
 
 cola.o: tdas/cola.c tdas/cola.h
 	gcc cola.c -c $(CFLAGS)
