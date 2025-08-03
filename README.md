@@ -59,3 +59,7 @@ destruir los simbolos al ir desencolando para imprimir en el main.
 Ojo con eso, si no destruis o guardas el puntero al desencolar perdes
 la memoria. Creo que igual lo sabias pq en la postfija no hay fugas
 y se desapila/desencola todo el rato. 
+
+
+
+// queda: función multiplicación, función división, racionales
