@@ -16,7 +16,6 @@
 
 // Clasificación
 enum tipo {ENTERO, RACIONAL, FUNCION, OPERADOR, PARENTESIS_ABIERTO, PARENTESIS_CERRADO};
-// Tabla de búsqueda
 enum funcion {FACT, ABS, INV, PI, EULER, PHI, FUNC_INDEFINIDO};
 enum operador{SUMA, RESTA, PRODUCTO, DIVISION, POTENCIA, CAMBIO_SIGNO, OP_INDEFINIDO};
 
@@ -50,30 +49,19 @@ struct simbolo {
 };
 
 struct simbolo *calculadora_suma(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_resta(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_producto(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_division(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_potencia(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_cambio_signo(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_factorial(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_absoluto(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_inverso(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_pi(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_phi(struct simbolo **arreglo_simbolos);
-
 struct simbolo *calculadora_euler(struct simbolo **arreglo_simbolos);
 
-//tabla de busqueda general
+//tabla de busqueda generica
 size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad){ //en cantidad mandarias OP_INDEFINIDO o FUNC_INDEFINIDO
     for(size_t i=0; i < cantidad; i++){
         if(!strcmp(s, opciones[i])){
