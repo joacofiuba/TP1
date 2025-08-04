@@ -17,7 +17,7 @@
 #define CADENA_CORTA 8
 #define CANT_OPERADORES 6
 #define CANT_FUNCIONES 6
-
+#define MAX_CANT_PARAMETROS 2
 
 
 // Clasificación
@@ -73,18 +73,30 @@ struct simbolo {
 
 
 
-struct simbolo *calculadora_suma(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_resta(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_producto(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_division(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_potencia(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_cambio_signo(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_factorial(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_absoluto(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_inverso(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_pi(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_phi(struct simbolo **arreglo_simbolos);
-struct simbolo *calculadora_euler(struct simbolo **arreglo_simbolos);
+racional_t *calculadora_potencia(racional_t *a, racional_t *b){
+    return a;
+}
+racional_t *calculadora_cambio_signo(racional_t *a){
+    return a;
+}
+racional_t *calculadora_factorial(racional_t *a){
+    return a;
+}
+racional_t *calculadora_absoluto(racional_t *a){
+    return a;
+}
+racional_t *calculadora_inverso(racional_t *a){
+    return a;
+}
+racional_t *calculadora_pi(){
+    return NULL;
+}
+racional_t *calculadora_phi(){
+    return NULL;
+}
+racional_t *calculadora_euler(){
+    return NULL;
+}
 
 // busqueda generica
 size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad){ //en cantidad mandarias CANT_OPERADORES o CANT_FUNCIONES
@@ -128,9 +140,10 @@ cola_t *cola_de_entrada(const char *linea) {
             if (linea[i] == '.' && isdigit(linea[i + 1])) {
                 aux->s[j++] = linea[i++]; // incluir el punto
                 aux->t = RACIONAL;
-                while(isdigit(linea[i]))
+                while(isdigit(linea[i])){
                     aux->s[j++] = linea[i++];
                     n++;
+                }
             }
 
             aux->s[j] = '\0';
@@ -283,7 +296,7 @@ cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion post
             while(!pila_esta_vacia(pila)){
                 struct simbolo *pila_tope = pila_ver_tope(pila);
                 if(pila_tope->t == PARENTESIS_ABIERTO){
-                    destruir_simbolo(pila_desapilar(pila)); //descarto el (
+                    free(pila_desapilar(pila)); //descarto el (
                     break;                 
                 }
                 
@@ -317,9 +330,7 @@ cola_t *cola_de_salida(cola_t *entrada){ //se devuelve la cola con notacion post
 //FUNCION AUXILIAR PARA CREAR NUMEROS RACIONALES
 
 racional_t *simbolo_a_racional(struct simbolo *numero){
-    
-    
-    
+   
     if (!numero) return NULL;
     char bcd[numero->n];
     size_t i = numero->n, j = 0, cant_decimales = 0;
@@ -362,6 +373,7 @@ racional_t *simbolo_a_racional(struct simbolo *numero){
         entero_destruir(entero_diez);
     }
     
+    entero_t *numerador = entero_desde_bcd(bcd,j);
     racional_t *racional = racional_crear(false, numerador, den);
     entero_destruir(numerador);
     if(den != NULL) entero_destruir(den);
@@ -370,211 +382,133 @@ racional_t *simbolo_a_racional(struct simbolo *numero){
 }
 
 
-
-
-
-//TOMA CUALQUIER NUMERO(ENTERO O RACIONAL) Y DEVUELVE EL NUMERADOR Y EL DENOMINADOR
-entero_t *numerador(struct simbolo *numero, entero_t **denominador){
-    if (!numero || !denominador) return NULL;
-    char bcd[numero->n];
-    size_t i = numero->n, j = 0, cant_decimales = 0;
-
-    if(numero->t == RACIONAL){
-        
-        while(i>0 && numero->s[i] == '0') i--; //ignoro los ceros no significativos
-    
-        while (i > 0 && numero->s[i] != '.') { //leo solo los decimales
-            bcd[j++] = numero->s[(i--) - 1] - '0';
-            cant_decimales++;
-        }
-        if (i > 0 && numero->s[i - 1] == '.') i--;
-        while (i > 0) { //leo la parte entera
-            bcd[j++] = numero->s[(i--)-1] - '0';
-        }//j tiene la cantidad de digitos del arreglo bcd
-    }
-
-    else if(numero->t == ENTERO){
-        while(i > 0){
-            bcd[j++] = numero->s[(i--) - 1] - '0';
-        }//j tiene la cantidad de digitos del arreglo
-        
-        
-    }
-
-    //RETORNO EL DENOMINADOR  CORRESPONDIENTE
-    if(cant_decimales == 0){
-        *denominador = NULL;
-    }
-    else {
-        char bcd_diez[] = {0, 1};
-        entero_t *entero_diez = entero_desde_bcd(bcd_diez, 2);
-        if (!entero_diez) return NULL;
-
-        entero_t *den = entero_clonar(entero_diez);
-        for (size_t k = 1; k < cant_decimales; k++) {
-            if (!entero_multiplicar(den, entero_diez)) {
-                entero_destruir(entero_diez);
-                entero_destruir(den);
-                return NULL;
-            }
-        }
-        entero_destruir(entero_diez);
-        *denominador = den;
-    }
-    return entero_desde_bcd(bcd, j);
-
-}
-
-
-
-
 //FUNCION AUXILIAR QUE REALICE LAS OPERACIONES CORRESPONDIENTES DEL COMPUTO DEL POSTFIJO
-/*
-struct simbolo *operacion(struct simbolo *aux, struct simbolo **arreglo_simbolos){//recibe el aux que se esta utilizando para el computo (funcion u operador) y el arreglo de estructuras con el numero o numeros 
-    if(aux->t == OPERADOR && arreglo_simbolos != NULL){
-        if(aux->indice_tipo == SUMA){
-            return calculadora_suma(arreglo_simbolos);
+
+racional_t *operacion(struct simbolo *aux, racional_t **arreglo_racionales_a_computar){//recibe el aux que se esta utilizando para el computo (funcion u operador) y el arreglo de estructuras con el numero o numeros 
+    if(aux->t == OPERADOR && arreglo_racionales_a_computar!= NULL){
+        if(aux->indice == SUMA){
+            return racional_sumar(arreglo_racionales_a_computar[1], arreglo_racionales_a_computar[0]);
         }
-        else if(aux->indice_tipo == RESTA){
-            return calculadora_resta(arreglo_simbolos);
+        else if(aux->indice == RESTA){
+            return racional_restar(arreglo_racionales_a_computar[1], arreglo_racionales_a_computar[0]);
         }
-        else if(aux->indice_tipo == PRODUCTO){
-            return calculadora_producto(arreglo_simbolos);
+        else if(aux->indice == PRODUCTO){
+            return racional_multiplicar(arreglo_racionales_a_computar[1], arreglo_racionales_a_computar[0]);
         }
-        else if(aux->indice_tipo == DIVISION){
-            return calculadora_division(arreglo_simbolos);
+        else if(aux->indice == DIVISION){
+            return racional_dividir(arreglo_racionales_a_computar[1], arreglo_racionales_a_computar[0]);
         }
-        else if(aux->indice_tipo == POTENCIA){
-            return calculadora_potencia(arreglo_simbolos);
+        else if(aux->indice == POTENCIA){
+            return calculadora_potencia(arreglo_racionales_a_computar[1], arreglo_racionales_a_computar[0]);
         }
-        else if(aux->indice_tipo == CAMBIO_SIGNO){
-            return calculadora_cambio_signo(arreglo_simbolos);
-        }
-    }
-    else if(aux->t == FUNCION && arreglo_simbolos != NULL){
-        if(aux->indice_tipo == FACT){
-            return calculadora_factorial(arreglo_simbolos);
-        }
-        else if(aux->indice_tipo == ABS){
-            return calculadora_absoluto(arreglo_simbolos);
-        }
-        else if(aux->indice_tipo == INV){
-            return calculadora_inverso(arreglo_simbolos);
+        else if(aux->indice == CAMBIO_SIGNO){
+            return calculadora_cambio_signo(arreglo_racionales_a_computar[0]);
         }
     }
-    else if(aux->t == FUNCION && arreglo_simbolos == NULL){
-        if(aux->indice_tipo == PI){
+    else if(aux->t == FUNCION && arreglo_racionales_a_computar != NULL){
+        if(aux->indice == FACT){
+            return calculadora_factorial(arreglo_racionales_a_computar[0]);
+        }
+        else if(aux->indice == ABS){
+            return calculadora_absoluto(arreglo_racionales_a_computar[0]);
+        }
+        else if(aux->indice == INV){
+            return calculadora_inverso(arreglo_racionales_a_computar[0]);
+        }
+    }
+    else if(aux->t == FUNCION && arreglo_racionales_a_computar == NULL){
+        if(aux->indice == PI){
             
         }
-        else if(aux->indice_tipo == EULER){
+        else if(aux->indice == EULER){
 
         }
-        else if(aux->indice_tipo == PHI){
+        else if(aux->indice == PHI){
             
         }
     }
     return NULL; //chequear despues los return
-}*/
+}
 
 
 //FUNCION AUXILIAR PARA LIIBERAR ARREGLO DE PUNTEROS A STRUCT SIMBOLO
 
-void destruir_arreglo_simbolos(struct simbolo **arreglo, size_t cantidad) {
 
-    for (size_t i = 0; i < cantidad; i++) {
-        destruir_simbolo(arreglo[i]);  // libera el struct simbolo* i-ésimo
+void destruir_arreglo_racionales(racional_t **racionales, size_t cantidad){
+    for(size_t i = 0; i < cantidad; i++){
+        racional_destruir(racionales[i]);
     }
-
-    free(arreglo);  // libera el arreglo de punteros
+    free(racionales);
 }
 
 
 //COMPUTO DEL POSTFIJO
-/*
-struct simbolo *computo_postfijo(cola_t *cola_postfijo){
-    pila_t *pila = pila_crear();
-    if(pila == NULL) return NULL;
-    struct simbolo *aux;
-    while((aux = cola_desencolar(cola_postfijo)) != NULL){
+
+
+racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro mandariamos cola_de_salida
+    //SI ES NUMERO APILO, SI ES OPERADOR O FUNCION DESAPILO TANTOS COMO NECESITE Y APILO EL RESULTADO PARCIAL
+    pila_t *pila_aux = pila_crear(); //esta pila va a ser distinta a las demas, va a ser de racional_t
+    if(pila_aux == NULL) return NULL;
+
+    struct simbolo *aux; //auxiliar para ir sacando los elementos de la cola
+    racional_t **arreglo_racionales_a_desapilar = malloc(sizeof(racional_t *) * MAX_CANT_PARAMETROS); //como maximo voy a desapilar dos parametros por vez
+    if(arreglo_racionales_a_desapilar == NULL) return NULL;
+
+    while((aux=cola_desencolar(cola_postfijo)) != NULL){
         if(aux->t == ENTERO || aux->t == RACIONAL){
-            if(!pila_apilar(pila, aux)){
-                limpiar_todo(NULL, pila, aux);
+            if(!pila_apilar(pila_aux, simbolo_a_racional(aux))){
+                free_all(NULL, pila_aux, aux);
                 return NULL;
             }
         }
-        else if(aux->t == OPERADOR){
-            struct simbolo **arreglo_simbolos = malloc(sizeof(struct simbolo *) * aux->aridad);
-            if(arreglo_simbolos == NULL){
-                limpiar_todo(NULL, pila, aux);
+        else if(aux->t == OPERADOR || aux->t == FUNCION){
+            size_t cant_elementos_a_desapilar;
+            if(aux->t == OPERADOR) cant_elementos_a_desapilar = operador_aridad[aux->indice];
+            else
+                cant_elementos_a_desapilar = funcion_parametros[aux->indice];
+
+            if(cant_elementos_a_desapilar == 0){//estamos en el caso de pi, euler, phi
+                //COMPLETAR
+            }
+            
+            size_t i; //A ESTE FOR ENTRA SOLO SI CANT_ELEMENTOS != 0
+            for(i = 0; i < cant_elementos_a_desapilar; i++){//caso en el que la cantidad de parametros sea distinta de 0
+                arreglo_racionales_a_desapilar[i] = pila_desapilar(pila_aux);
+                if(arreglo_racionales_a_desapilar[i] == NULL){
+                    fprintf(stderr, "CANTIDAD INVALIDA DE PARAMETROS");
+                    return NULL;
+                }
+            }//aca ya me arme el arreglo con los racionales a computar
+            if(i != MAX_CANT_PARAMETROS){ //completo el arreglo que cree al principio (por default con MAX_CANT_PARAMETROS)
+                for(size_t j = i; j < MAX_CANT_PARAMETROS;j++)
+                    arreglo_racionales_a_desapilar[j] = NULL; 
+            }
+            //HASTA ACA TENGO EL ARREGLO DE RACIONALES LISTO PARA COMPUTAR EL RESULTADO PARCIAL
+            racional_t *resultado_parcial = operacion(aux, arreglo_racionales_a_desapilar);
+            //tengo que liberar el arreglo de racionales
+            destruir_arreglo_racionales(arreglo_racionales_a_desapilar, MAX_CANT_PARAMETROS);
+            if(!pila_apilar(pila_aux, resultado_parcial)){
+                free_all(NULL, pila_aux, aux);
+                racional_destruir(resultado_parcial);
+                fprintf(stderr, "ERROR APILANDO Y COMPUTANDO EL POSTFIJO");
                 return NULL;
-            }
-            size_t i=0;
-            for(i=0; i < aux->aridad; i++){ //desapilo tantos numeros como correspondan segun la aridad
-                arreglo_simbolos[i] = pila_desapilar(pila);//este arreglo de punteros a struct simbolo lo voy a mandar a la funcion operacion
-                if(arreglo_simbolos[i] == NULL){ //quiere decir que la pila quedo vacia
-                    fprintf(stderr, "CANTIDAD INVALIDA DE PARAMETROS\n"); //caso en el que haya menos parametros de los que se requiere
-                    destruir_arreglo_simbolos(arreglo_simbolos, aux->aridad);
-                    limpiar_todo(NULL, pila, aux);
-                    return NULL;
-                }
-            }
-           
-            struct simbolo *resultado = operacion(aux, arreglo_simbolos); //este resultado lo voy a mandar a la pila
-            if(!pila_apilar(pila, resultado)){
-                destruir_simbolo(resultado);
-                limpiar_todo(NULL, pila, aux);
-                return NULL;
-            }
-            destruir_simbolo(aux);
-            destruir_arreglo_simbolos(arreglo_simbolos, aux->aridad);
-
+            }//apilo el resultado y sigo con el while
         }
-        else if(aux->t == FUNCION){ //la cant de parametros puede ser 0 o 1
-            if(aux->cant_parametros != 0){ //puede ser fact, abs o inv
-                struct simbolo **arreglo_simbolos = malloc(sizeof(struct simbolo *) * aux->cant_parametros);
-                if(arreglo_simbolos == NULL){
-                    limpiar_todo(NULL, pila, aux);
-                    return NULL;
-                }
-                for(size_t i=0; i < aux->cant_parametros; i++){ //desapilo tantos numeros como correspondan segun la aridad
-                    arreglo_simbolos[i] = pila_desapilar(pila);//este arreglo de punteros a struct simbolo lo voy a mandar a la funcion operacion
-                    if(arreglo_simbolos[i] == NULL){ //quiere decir que la pila quedo vacia
-                        fprintf(stderr, "CANTIDAD INVALIDA DE PARAMETROS\n"); //caso en el que haya menos parametros de los que se requiere
-                        destruir_arreglo_simbolos(arreglo_simbolos, aux->cant_parametros);
-                        limpiar_todo(NULL, pila, aux);
-                        return NULL;
-                    }
-                }
-                struct simbolo *resultado = operacion(aux, arreglo_simbolos);
-                if(!pila_apilar(pila, resultado)){
-                    destruir_simbolo(resultado);
-                    limpiar_todo(NULL, pila, aux);
-                    return NULL;
-                }
-                destruir_simbolo(aux);
-                destruir_arreglo_simbolos(arreglo_simbolos, aux->cant_parametros);
-                
-            }
-            else if(aux->cant_parametros == 0){
+    }
+    racional_t *resultado_final = pila_desapilar(pila_aux); 
+    //si sigue habiendo elementos en la pila es porque hubo un error, chequeo eso
 
-            }            
-        }
-    } //una vez que termino de desencolar la cola de postfijo tengo el resultado en la pila
-    //tengo que chequear que la pila tenga exactamente un elemento
-    struct simbolo *resultado_final = pila_desapilar(pila);
-
-    // Si después de desapilar hay *algo más*, es un error
-    if (!pila_esta_vacia(pila)) {
+    if (!pila_esta_vacia(pila_aux)) {
         fprintf(stderr, "ERROR: La pila contiene más de un resultado al finalizar el cómputo (expresión mal formada)\n");
-        limpiar_todo(NULL, pila, resultado_final);  // Limpio lo que queda
+        racional_destruir(resultado_final);
+        free_all(NULL, pila_aux, NULL);  // Limpio lo que queda, el aux se supone que termino en NULL
         return NULL;
     }
-
-    pila_destruir(pila, destruir_simbolo); // Ya está vacía, no pasa nada
+    free_all(NULL, pila_aux, NULL);
     return resultado_final;
-
 }
-*/
+
+
 int main(){
     char linea[MAX_LINEA];
     printf("INGRESE UNA ENTRADA EN NOTACION INFIJA: \n");
@@ -607,7 +541,7 @@ int main(){
     struct simbolo *elemento_cola_salida;
     while((elemento_cola_salida = cola_desencolar(cola_postfija)) != NULL){
         printf("%s\n", elemento_cola_salida->s);
-        destruir_simbolo(elemento_cola_salida);
+        free(elemento_cola_salida);
     }
 
     cola_destruir(cola_infija, free);
