@@ -26,8 +26,16 @@ bool entero_desplazar_derecha(entero_t *e);
 bool entero_desplazar_izquierda(entero_t *e);
 int entero_comparar(const entero_t *a, const entero_t *b);
 bool entero_sumar(entero_t *a, const entero_t *b);
+
 bool entero_restar(entero_t *a, const entero_t *b);
 bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **resto);
 bool entero_multiplicar(entero_t *a, const entero_t *b);
+
+
+// no son propias del tda son solo para pruebas de entero_multiplicar
+// bool entero_a_izquierda(entero_t *e);
+// bool entero_a_derecha(entero_t *e);
+// bool entero_partir(const entero_t *e, size_t m, entero_t **e1, entero_t **e0);
+// size_t entero_digitos(entero_t *e);
 
 #endif

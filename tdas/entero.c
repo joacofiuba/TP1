@@ -129,8 +129,7 @@ int entero_comparar(const entero_t *a, const entero_t *b){
     while(i > 0){
         i--;
         if(a->d[i] != b->d[i]){
-            if(a->d[i] > b->d[i]) return 1;
-            return -1;
+            return a->d[i] > b->d[i] ? 1 : -1; 
         }	
     }
     return 0;
@@ -278,12 +277,13 @@ bool entero_restar(entero_t *a, const entero_t *b){
 
 char *entero_a_bcd(const entero_t *entero, size_t *n){
     size_t n_bin = entero->n;
+    *n = 0;
 
     entero_t *aux = entero_clonar(entero);
     if(aux == NULL) return NULL;
     // Podría ser menos (2.5), pero complica excesivamente la lógica de los corrimientos a izquierda.
     if(_redimensionar(aux, 3 * n_bin) == false){
-        free(aux);
+        entero_destruir(aux);
         return NULL;	
     } 
 
@@ -305,13 +305,12 @@ char *entero_a_bcd(const entero_t *entero, size_t *n){
 
     char *bcd = malloc(sizeof(char) * ((n_aux - n_bin) * 8 + 8)); 
     if(bcd == NULL){
-        free(aux);
+        entero_destruir(aux);
         return NULL;
     }	
 
-    *n = 0; 
     // Variable que corta el tamaño del bcd (sirve para determinar el largo del bcd[])
-    bool corte = 0;
+    bool corte = false;
 
 
     // Recorro los elementos reservados dentro del aux para los digitos bcd y los guardo en el vector bcd[].
@@ -381,7 +380,7 @@ entero_t *entero_desde_bcd(const char bcd[], size_t n){
     
     aux->n = n_bin;
     if(_redimensionar(aux, corte(aux)) == false){
-        free(aux);
+        entero_destruir(aux);
         return NULL;
     }
 
@@ -414,6 +413,172 @@ bool entero_imprimir(const entero_t *entero){
 }
 
 
+// Funciones de corrimientos
+bool entero_a_derecha(entero_t *e){
+    size_t n = e->n;
+    
+    if(n == 1){
+        e->d[0] = 0;
+        return true;
+    }
+    for(size_t i = 1; i < n; i++)
+        e->d[i - 1] = e->d[i];
+
+    if(!_redimensionar(e, n - 1))
+        return false;
+    
+    return true;
+} 
+// msb     lsb
+// [9x2^64, 7x2^32, 3] / 2^32 => [0, 9x2^32 , 7]
+// [a, b, c]
+// [0, a, b]
+
+
+bool entero_a_izquierda(entero_t *e){
+    size_t n = e->n;  
+    if(!_redimensionar(e, n + 1))
+        return false;
+
+    for(size_t i = 0; i < n; i++)
+        e->d[n - i] = e->d[n - 1 - i];      
+        
+    e->d[0] = 0;
+    return true;
+}
+
+// parte al entero en dos mitades en terminos 
+// de digitos / si e->n = n => e0->n = m y e1->n = n - m
+bool entero_partir(const entero_t *e, size_t m, entero_t **e1, entero_t **e0){
+    *e0 = entero_clonar(e);
+    if(*e0 == NULL)
+        return false;
+
+    if(m >= e->n){
+        *e1 = entero_cero();
+        if(*e1 == NULL){
+            entero_destruir(*e0);
+            return false;
+        }
+        // tenemos al entero partido en e1 y e0, e1 = 0
+        return true;
+    }
+    
+    *e1 = entero_clonar(e);
+    if(*e1 == NULL){
+        entero_destruir(*e0);
+        return false;
+    }
+
+    if(!_redimensionar(*e0, m)){
+        entero_destruir(*e0);
+        entero_destruir(*e1);
+        return false;
+    }
+
+    for(size_t i = 0; i < m; i++)
+        if(!entero_a_derecha(*e1)){
+            entero_destruir(*e1);
+            entero_destruir(*e0);
+            return false;
+        }
+
+    // tenemos el entero partido en e1 y e0
+    return true;
+}
+
+bool entero_multiplicar(entero_t *a, const entero_t *b){
+    size_t m = a->n >= b->n ? a->n : b->n; 
+   
+    // caso base
+    if(m == 1){ 
+        uint64_t d = (uint64_t)a->d[0] * b->d[0];
+        // printf("uint64_t d = %lu \n", d);
+        if(d > UINT33){
+            _redimensionar(a, 2);
+            a->d[0] = d % UINT33; // 69 % 10 = 9 
+            a->d[1] = d / UINT33; // 69 / 10 = 6
+        }
+        else 
+        a->d[0] = d;
+
+        return true;
+    }
+
+    m /= 2; // reducción arbitraria
+    entero_t *a1, *a0;
+    entero_t *b1, *b0;
+    
+    // si a->n es impar => a1 > a0 por como funciona la función entero_partir y que estemos
+    // dividiendo por dos un entero ( m / 2). lo mismo para b.
+    if(!entero_partir(a, m, &a1, &a0))
+        return false;
+    
+    if(!entero_partir(b, m, &b1, &b0)){
+        entero_destruir(a1);
+        entero_destruir(a0);
+        return false;
+    }
+
+    
+    entero_t *aux1 = entero_clonar(a0);
+    entero_t *aux2 = entero_clonar(a1);
+    
+    // printf("a1: "); entero_imprimir(a1); printf("\n");
+    // printf("a0: "); entero_imprimir(a0); printf("\n");
+    //
+    // printf("b1: "); entero_imprimir(b1); printf("\n");
+    // printf("b0: "); entero_imprimir(b0); printf("\n");
+
+    entero_multiplicar(a1, b1); // z2 = a1    
+    entero_multiplicar(a0, b0); // z0 = a0
+
+    entero_sumar(aux1, aux2);
+    entero_sumar(b1, b0);
+    entero_multiplicar(aux1, b1); // z3 = aux1
+
+    // printf("z0: "); entero_imprimir(a0); puts("");
+    // printf("z2: "); entero_imprimir(a1); puts(""); 
+    // printf("z3: "); entero_imprimir(aux1); printf("\n");
+
+    // construyo z1
+    entero_restar(aux1, a1);
+    // printf("aux1 = z3 - z2: "); entero_imprimir(aux1); puts("");
+
+
+    entero_restar(aux1, a0); // z1 = aux1
+    // printf("z1 = aux1 = z3 - z2 - z0: "); entero_imprimir(aux1); puts("");
+
+
+    entero_t *z2 = a1;
+    entero_t *z1 = aux1;
+    entero_t *z0 = a0;
+    
+    for(size_t i = 0; i < (2 * m); i++)
+        entero_a_izquierda(z2);
+    for(size_t i = 0; i < m; i++)
+        entero_a_izquierda(z1);
+    
+
+    entero_sumar(z1, z0);
+    entero_sumar(z2, z1); // a * b = z2
+
+    _redimensionar(a, z2->n);
+    for(size_t i = 0; i < z2->n; i++) //memcpy?
+        a->d[i] = z2->d[i];
+    
+    entero_destruir(a0);
+    entero_destruir(a1);
+    entero_destruir(b0);
+    entero_destruir(b1);
+
+    entero_destruir(aux1); 
+    entero_destruir(aux2);
+
+    return true;
+}
+
+
 bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **resto) {
     entero_t *d = entero_clonar(divisor);
     entero_t *r = entero_clonar(dividendo);
@@ -432,8 +597,9 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     entero_t *q = dividendo;
 
     // Podríamos tener una función para desplazar elementos en el arreglo.
-    for(size_t i = 0; i < n * 32; i++)
-        entero_desplazar_izquierda(d);
+    entero_a_izquierda(d);
+    // for(size_t i = 0; i < n * 32; i++)
+    //     entero_desplazar_izquierda(d);
 
     for(size_t i = 0; i < n * 32; i++) {
         entero_desplazar_izquierda(q);
@@ -447,8 +613,10 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     entero_destruir(d);
 
     // Podríamos tener una función para desplazar elementos en el arreglo.
-    for(size_t i = 0; i < n * 32; i++)
-        entero_desplazar_derecha(r);
+    // for(size_t i = 0; i < n * 32; i++)
+    //     entero_desplazar_derecha(r);
+    
+    entero_a_derecha(r); 
 
     if(resto != NULL){
         _redimensionar(r, corte(r));
@@ -460,46 +628,46 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     return true;
 }
 
-
-bool entero_multiplicar(entero_t *a, const entero_t *b) {
-    entero_t *aa = _crear(1);
-    if(aa == NULL) return false;
-
-    entero_t *aux = _crear(a->n + b->n + 1);
-    if(aux == NULL) {
-        entero_destruir(aa);
-        return false;
-    }
-
-    // Swapeamos el contenido de a con aa, vamos a guardar el resultado en a
-    uint32_t *swap = aa->d;
-    aa->d = a->d;
-    a->d = swap;
-    aa->n = a->n;
-    a->n = 1;
-
-    for(size_t i = 0; i < b->n; i++) {
-        for(size_t j = 0; j < aa->n; j++) {
-            uint64_t m = (uint64_t)aa->d[j] * b->d[i];
-            aux->d[j] = m;
-            aux->d[j + 1] = m >> 32;
-
-            entero_sumar(a, aux);
-
-            aux->d[j] = 0;
-        }
-        aux->d[aa->n] = 0;
-
-        // INSISTO con lo que dije en dividir:
-        // Podríamos tener una función para desplazar elementos en el arreglo.
-        for(size_t j = 0; j < 32; j++)
-            entero_desplazar_izquierda(aa);
-    }
-
-    entero_destruir(aa);
-    entero_destruir(aux);
-
-    return true;
-}
+// FUNCION MULTIPLICAR VIEJA O(nxm)
+// bool entero_multiplicar(entero_t *a, const entero_t *b) {
+//     entero_t *aa = _crear(1);
+//     if(aa == NULL) return false;
+//
+//     entero_t *aux = _crear(a->n + b->n + 1);
+//     if(aux == NULL) {
+//         entero_destruir(aa);
+//         return false;
+//     }
+//
+//     // Swapeamos el contenido de a con aa, vamos a guardar el resultado en a
+//     uint32_t *swap = aa->d;
+//     aa->d = a->d;
+//     a->d = swap;
+//     aa->n = a->n;
+//     a->n = 1;
+//
+//     for(size_t i = 0; i < b->n; i++) {
+//         for(size_t j = 0; j < aa->n; j++) {
+//             uint64_t m = (uint64_t)aa->d[j] * b->d[i];
+//             aux->d[j] = m;
+//             aux->d[j + 1] = m >> 32;
+//
+//             entero_sumar(a, aux);
+//
+//             aux->d[j] = 0;
+//         }
+//         aux->d[aa->n] = 0;
+//
+//         // INSISTO con lo que dije en dividir:
+//         // Podríamos tener una función para desplazar elementos en el arreglo.
+//         for(size_t j = 0; j < 32; j++)
+//             entero_desplazar_izquierda(aa);
+//     }
+//
+//     entero_destruir(aa);
+//     entero_destruir(aux);
+//
+//     return true;
+// }
 
 
