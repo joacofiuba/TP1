@@ -73,9 +73,7 @@ struct simbolo {
 
 
 
-racional_t *calculadora_potencia(racional_t *a, racional_t *b){
-    return a;
-}
+
 racional_t *calculadora_cambio_signo(racional_t *a){
     return a;
 }
@@ -382,6 +380,108 @@ racional_t *simbolo_a_racional(struct simbolo *numero){
 }
 
 
+//FUNCIONES DE OPERACIONES Y FUNCIONES
+
+//INVERSO MULTIPLICATIVO
+
+
+
+//POTENCIA
+
+//FUNCION AUXILIAR PARA DESTRUIR LOS NUMERADORES Y DENOMINADORES
+void destruir_clones(entero_t *num_a, entero_t *den_a, entero_t* num_b, entero_t *den_b){
+    entero_destruir(num_a);
+    entero_destruir(den_a);
+    entero_destruir(num_b);
+    entero_destruir(den_b);
+}
+//DESPUES DE USAR ESTA FUNCION HAY QUE LIBERAR LOS RACIONALES A Y B
+racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //computa a^b
+    entero_t *uno = entero_uno();
+    entero_t *cero = entero_cero(); //hay que liberarlos
+    
+    entero_t *numerador_b = entero_clonar(racional_numerador(b));
+    entero_t *denominador_b = entero_clonar(racional_denominador(b));
+
+    entero_t *numerador_a = entero_clonar(racional_numerador(a));
+    entero_t *denominador_a = entero_clonar(racional_denominador(a)); //hay que liberarlos
+
+    //el racional b tiene que ser entero si o si
+    if(entero_comparar(uno, racional_denominador(b)) != 0){
+        fprintf(stderr, "PARA LA POTENCIA A^B, B TIENE QUE SER UN NUMERO ENTERO'\n");
+        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        entero_destruir(uno);
+        entero_destruir(cero);
+        return NULL;
+    }
+
+    //CASOS EN LOS QUE B SEA UNO O CERO
+    //CASO EN EL QUE B SEA 0 --> potencia = 1
+    else if(entero_comparar(cero, racional_numerador(b)) == 0 && entero_comparar(cero, racional_numerador(a))!= 0){
+        racional_t *potencia = racional_crear(false, uno, uno);
+        entero_destruir(uno);
+        entero_destruir(cero);
+        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        return potencia;
+    }
+    
+    //CASO EN EL QUE B SEA 1 --> DEVUELVO a
+
+    else if(entero_comparar(uno, racional_numerador(b)) == 0 && entero_comparar(uno,racional_denominador(b)) == 0){
+        racional_t *potencia = racional_crear(racional_es_negativo(a), numerador_a, denominador_a);
+        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        entero_destruir(uno);
+        entero_destruir(cero);
+        return potencia;
+    }
+
+
+
+    //CASO EN EL QUE B SEA UN ENTERO NEGATIVO
+    else if(!racional_es_negativo(b)){ //me tengo que crear un racional igual a b pero en positivo --> computo a^b y hago el inverso multiplicativo
+        racional_t *b_clon_positivo = racional_crear(false, numerador_b, denominador_b);
+        racional_t *potencia_positiva = calculadora_potencia(a, b_clon_positivo);
+        racional_destruir(b_clon_positivo);
+        entero_destruir(uno);
+        entero_destruir(cero);
+        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        
+        return calculadora_inverso(potencia_positiva);
+    }
+
+    entero_destruir(uno);
+    entero_destruir(cero);
+    //CASO EN EL QUE B SEA UN ENTERO POSITIVO
+    //tengo que pasar a size_t el b 
+    //numerador de b
+    //convierto el numerador a bcd y de bcd a binario
+
+    //entero_t *numerador_b = racional_numerador(b);
+    
+    size_t n;
+    char *bcd_numerador_b = entero_a_bcd(racional_numerador(b), &n);
+    if(n >= 10){
+        fprintf(stderr, "LA POTENCIA SE VA DE RANGO, MAXIMO UN NUMERO DE 9 DIGITOS\n");
+        return NULL;
+    }
+    size_t numerador_b_en_binario = bcd_a_binario(bcd_numerador_b, n);
+    free(bcd_numerador_b);
+    
+    racional_t *a_clon = racional_crear(racional_es_negativo(a), numerador_a, denominador_a);
+    racional_t *potencia = a_clon;
+    
+    for(size_t i = 1; i < numerador_b_en_binario; i++){//MULTIPLICO B VECES EL RACIONAL A POR SI MISMO
+        a_clon = racional_multiplicar(potencia, a);
+        racional_destruir(potencia);
+        potencia = a_clon;
+    }//una vez que salgo del for tengo el resultado en potencia
+    
+    destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+    
+    return potencia;
+}
+
+
 //FUNCION AUXILIAR QUE REALICE LAS OPERACIONES CORRESPONDIENTES DEL COMPUTO DEL POSTFIJO
 
 racional_t *operacion(struct simbolo *aux, racional_t **arreglo_racionales_a_computar){//recibe el aux que se esta utilizando para el computo (funcion u operador) y el arreglo de estructuras con el numero o numeros 
@@ -414,17 +514,6 @@ racional_t *operacion(struct simbolo *aux, racional_t **arreglo_racionales_a_com
         }
         else if(aux->indice == INV){
             return calculadora_inverso(arreglo_racionales_a_computar[0]);
-        }
-    }
-    else if(aux->t == FUNCION && arreglo_racionales_a_computar == NULL){
-        if(aux->indice == PI){
-            
-        }
-        else if(aux->indice == EULER){
-
-        }
-        else if(aux->indice == PHI){
-            
         }
     }
     return NULL; //chequear despues los return
@@ -466,10 +555,6 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
             if(aux->t == OPERADOR) cant_elementos_a_desapilar = operador_aridad[aux->indice];
             else
                 cant_elementos_a_desapilar = funcion_parametros[aux->indice];
-
-            if(cant_elementos_a_desapilar == 0){//estamos en el caso de pi, euler, phi
-                //COMPLETAR
-            }
             
             size_t i; //A ESTE FOR ENTRA SOLO SI CANT_ELEMENTOS != 0
             for(i = 0; i < cant_elementos_a_desapilar; i++){//caso en el que la cantidad de parametros sea distinta de 0
@@ -479,7 +564,7 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
                     return NULL;
                 }
             }//aca ya me arme el arreglo con los racionales a computar
-            if(i != MAX_CANT_PARAMETROS){ //completo el arreglo que cree al principio (por default con MAX_CANT_PARAMETROS)
+            if(i < MAX_CANT_PARAMETROS){ //completo el arreglo que cree al principio (por default con MAX_CANT_PARAMETROS)
                 for(size_t j = i; j < MAX_CANT_PARAMETROS;j++)
                     arreglo_racionales_a_desapilar[j] = NULL; 
             }
