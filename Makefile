@@ -3,10 +3,10 @@ LFLAGS = -lm
 # Regla principal
 all: calculadora
 
-calculadora: main.o cola.o pila.o entero.o racional.o
-	gcc main.o cola.o pila.o entero.o racional.o -o calculadora $(LFLAGS)
+calculadora: main.o cola.o pila.o entero.o racional.o ej1.o
+	gcc main.o cola.o pila.o entero.o racional.o ej1.o -o calculadora $(LFLAGS)
 
-main.o: main.c tdas/cola.h tdas/pila.h tdas/entero.h tdas/racional.c
+main.o: main.c tdas/cola.h tdas/pila.h tdas/entero.h tdas/racional.h tdas/ej1.h 
 	gcc main.c -c $(CFLAGS)
 
 cola.o: tdas/cola.c tdas/cola.h
@@ -21,5 +21,7 @@ racional.o: tdas/racional.c tdas/racional.h tdas/entero.h
 entero.o: tdas/entero.c tdas/entero.h 
 	gcc tdas/entero.c -c $(CFLAGS)
 
+ej1.o: tdas/ej1.c tdas/ej1.h 
+	gcc tdas/ej1.c -c $(CFLAGS)
 clean:
 	rm *.o calculadora
