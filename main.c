@@ -386,41 +386,51 @@ racional_t *calculadora_absoluto(const racional_t *r){
 
 racional_t *calculadora_factorial(const racional_t *a){
     entero_t *uno = entero_uno();
-    entero_t *cero = entero_cero();//hay que destruirlos
-    
-    //CASO EN EL QUE EL NUMERO A SEA CERO
-    
-    //CASO EN EL QUE A NO SEA UN ENTERO
+    entero_t *cero = entero_cero();
+
+    // Verificaciones
     if(entero_comparar(uno, racional_denominador(a)) != 0 || racional_es_negativo(a)){
         fprintf(stderr, "PARA FACTORIAL SOLO SE ACEPTAN NUMEROS NATURALES\n");
         entero_destruir(uno);
         entero_destruir(cero);
         return NULL;
     }
-    //CASO EN EL QUE EL NUMERO A SEA CERO
-    else if(entero_comparar(cero, racional_numerador(a)) == 0){
-        racional_t * aux = racional_crear(false, uno, uno);
+
+    // Caso base: 0! = 1
+    if(entero_comparar(cero, racional_numerador(a)) == 0){
+        racional_t *aux = racional_crear(false, entero_uno(), entero_uno());
         entero_destruir(uno);
         entero_destruir(cero);
         return aux;
     }
 
-    //CASO VALIDO
-    entero_t *numerador = entero_clonar(racional_numerador(a));
-    entero_t *numerador_clon = entero_clonar(racional_numerador(a));
-    while(entero_comparar(numerador_clon, uno) ){//COMPLETAR
-        entero_restar(numerador_clon, uno);
-        entero_multiplicar(numerador, numerador_clon);
+    // Caso general
+    entero_t *i = entero_uno();
+    entero_t *a_clon = entero_clonar(racional_numerador(a));
+    entero_t *resultado = entero_uno(); // acumulador
+
+    
+    
+    while(entero_comparar(i, a_clon) <= 0){
+        entero_multiplicar(resultado, i);
+        entero_sumar(i, uno);
     }
     
-    racional_t *factorial = racional_crear(false, numerador, uno);
-    entero_destruir(numerador);
-    entero_destruir(numerador_clon);
+
+    racional_t *factorial = racional_crear(false, resultado, entero_uno());
+
+    // Limpieza
     entero_destruir(uno);
     entero_destruir(cero);
+    entero_destruir(i);
+    entero_destruir(a_clon);
+    entero_destruir(resultado);
 
     return factorial;
 }
+
+
+
 
 //CAMBIO DE SIGNO
 
