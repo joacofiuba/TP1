@@ -414,7 +414,7 @@ bool entero_imprimir(const entero_t *entero){
 
 
 // Funciones de corrimientos
-bool entero_a_derecha(entero_t *e){
+static bool entero_a_derecha(entero_t *e){
     size_t n = e->n;
     
     if(n == 1){
@@ -435,7 +435,7 @@ bool entero_a_derecha(entero_t *e){
 // [0, a, b]
 
 
-bool entero_a_izquierda(entero_t *e){
+static bool entero_a_izquierda(entero_t *e){
     size_t n = e->n;  
     if(!_redimensionar(e, n + 1))
         return false;
@@ -449,7 +449,7 @@ bool entero_a_izquierda(entero_t *e){
 
 // parte al entero en dos mitades en terminos 
 // de digitos / si e->n = n => e0->n = m y e1->n = n - m
-bool entero_partir(const entero_t *e, size_t m, entero_t **e1, entero_t **e0){
+static bool entero_partir(const entero_t *e, size_t m, entero_t **e1, entero_t **e0){
     *e0 = entero_clonar(e);
     if(*e0 == NULL)
         return false;
@@ -597,9 +597,13 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     entero_t *q = dividendo;
 
     // Podríamos tener una función para desplazar elementos en el arreglo.
-    entero_a_izquierda(d);
-    // for(size_t i = 0; i < n * 32; i++)
-    //     entero_desplazar_izquierda(d);
+    
+    //puts("1");
+    
+    //puts("2");
+    for(size_t i = 0; i < n; i++)
+        entero_a_izquierda(d);
+
 
     for(size_t i = 0; i < n * 32; i++) {
         entero_desplazar_izquierda(q);
@@ -611,12 +615,10 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     }
 
     entero_destruir(d);
-
-    // Podríamos tener una función para desplazar elementos en el arreglo.
-    // for(size_t i = 0; i < n * 32; i++)
-    //     entero_desplazar_derecha(r);
     
-    entero_a_derecha(r); 
+    //Podríamos tener una función para desplazar elementos en el arreglo.
+    for(size_t i = 0; i < n; i++)
+        entero_a_derecha(r);    
 
     if(resto != NULL){
         _redimensionar(r, corte(r));
@@ -625,6 +627,7 @@ bool entero_dividir(entero_t *dividendo, const entero_t *divisor, entero_t **res
     }
 
     entero_destruir(r);
+
     return true;
 }
 
