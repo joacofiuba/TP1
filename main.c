@@ -137,7 +137,11 @@ cola_t *cola_de_entrada(const char *linea) {
 
             aux->s[j] = '\0';
             aux->n = n;
-            cola_encolar(entrada, aux);
+            if(!cola_encolar(entrada, aux)){
+                cola_destruir(entrada, free);
+                free(aux);
+                return NULL;
+            }
             continue;
         }
 
@@ -157,7 +161,11 @@ cola_t *cola_de_entrada(const char *linea) {
             }
 
             aux->indice = indice_funcion;
-            cola_encolar(entrada, aux);
+            if(!cola_encolar(entrada, aux)){
+                cola_destruir(entrada, free);
+                free(aux);
+                return NULL;
+            }
             continue;
         }
 
@@ -168,7 +176,11 @@ cola_t *cola_de_entrada(const char *linea) {
             aux->t = PARENTESIS_ABIERTO;
             aux->s[j++] = linea[i++];
             aux->s[j] = '\0';
-            cola_encolar(entrada, aux);
+            if(!cola_encolar(entrada, aux)){
+                cola_destruir(entrada, free);
+                free(aux);
+                return NULL;
+            }
             continue;
         }
         if(linea[i] == ')'){
@@ -176,13 +188,17 @@ cola_t *cola_de_entrada(const char *linea) {
             if(balance_parentesis < 0){
                 fprintf(stderr, "¡Se está cerrando un paréntesis que nunca se abrió!");
                 free(aux);
-                cola_destruir(entrada, free); //TERMINAR
+                cola_destruir(entrada, free); 
                 return NULL;
             }
             aux->t = PARENTESIS_CERRADO;
             aux->s[j++] = linea[i++];
             aux->s[j] = '\0';
-            cola_encolar(entrada, aux);
+            if(!cola_encolar(entrada, aux)){
+                cola_destruir(entrada, free);
+                free(aux);
+                return NULL;
+            }
             continue;
         }
 
@@ -203,7 +219,11 @@ cola_t *cola_de_entrada(const char *linea) {
         // else if(indice_operador == CAMBIO_SIGNO) aux->aridad = 1;
         
         aux->indice = indice_operador; 
-        cola_encolar(entrada, aux);
+        if(!cola_encolar(entrada, aux)){
+            cola_destruir(entrada, free);
+            free(aux);
+            return NULL;
+        }
 
     } //aca termina el while principal
 
@@ -418,13 +438,11 @@ racional_t *calculadora_factorial(const racional_t *a){
     
 
     racional_t *factorial = racional_crear(false, resultado, entero_uno());
-
-    // Limpieza
-    entero_destruir(uno);
-    entero_destruir(cero);
     entero_destruir(i);
     entero_destruir(a_clon);
     entero_destruir(resultado);
+    entero_destruir(uno);
+    entero_destruir(cero);
 
     return factorial;
 }
@@ -468,16 +486,17 @@ racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //co
     entero_t *uno = entero_uno();
     entero_t *cero = entero_cero(); //hay que liberarlos
     
-    entero_t *numerador_b = entero_clonar(racional_numerador(b));
-    entero_t *denominador_b = entero_clonar(racional_denominador(b));
+    entero_t *numerador_b_clon = entero_clonar(racional_numerador(b));
+    entero_t *denominador_b_clon = entero_clonar(racional_denominador(b));
 
-    entero_t *numerador_a = entero_clonar(racional_numerador(a));
-    entero_t *denominador_a = entero_clonar(racional_denominador(a)); //hay que liberarlos
+    entero_t *numerador_a_clon = entero_clonar(racional_numerador(a));
+    entero_t *denominador_a_clon = entero_clonar(racional_denominador(a)); //hay que liberarlos
+
 
     //el racional b tiene que ser entero si o si
     if(entero_comparar(uno, racional_denominador(b)) != 0){
         fprintf(stderr, "PARA LA POTENCIA A^B, B TIENE QUE SER UN NUMERO ENTERO'\n");
-        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        
         entero_destruir(uno);
         entero_destruir(cero);
         return NULL;
@@ -489,15 +508,15 @@ racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //co
         racional_t *potencia = racional_crear(false, uno, uno);
         entero_destruir(uno);
         entero_destruir(cero);
-        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        destruir_clones(numerador_a_clon, denominador_a_clon, numerador_b_clon, denominador_b_clon);
         return potencia;
     }
     
     //CASO EN EL QUE B SEA 1 --> DEVUELVO a
 
     else if(entero_comparar(uno, racional_numerador(b)) == 0 && entero_comparar(uno,racional_denominador(b)) == 0){
-        racional_t *potencia = racional_crear(racional_es_negativo(a), numerador_a, denominador_b);
-        destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+        racional_t *potencia = racional_crear(racional_es_negativo(a), numerador_a_clon, denominador_b_clon);
+        destruir_clones(numerador_a_clon, denominador_a_clon, numerador_b_clon, denominador_b_clon);
         entero_destruir(uno);
         entero_destruir(cero);  
         if(racional_es_negativo(b)){
@@ -510,12 +529,7 @@ racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //co
         
     entero_destruir(uno);
     entero_destruir(cero);
-    //CASO EN EL QUE B SEA UN ENTERO POSITIVO
-    //tengo que pasar a size_t el b 
-    //numerador de b
-    //convierto el numerador a bcd y de bcd a binario
 
-    //entero_t *numerador_b = racional_numerador(b);
     //TODO ESTO COMPUTA A^B (SIN TENER EN CUENTA SI B ES POSITIVO O NEGATIVO)
     size_t n;
     char *bcd_numerador_b = entero_a_bcd(racional_numerador(b), &n);
@@ -528,7 +542,7 @@ racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //co
     free(bcd_numerador_b);
     
     
-    racional_t *a_clon = racional_crear(racional_es_negativo(a), numerador_a, denominador_a);
+    racional_t *a_clon = racional_crear(racional_es_negativo(a), numerador_a_clon, denominador_a_clon);
     racional_t *potencia = a_clon;
     
     for(size_t i = 1; i < numerador_b_en_binario; i++){//MULTIPLICO B VECES EL RACIONAL A POR SI MISMO
@@ -537,10 +551,12 @@ racional_t *calculadora_potencia(const racional_t *a, const racional_t *b){ //co
         potencia = a_clon;
     }//una vez que salgo del for tengo el resultado en potencia
     
-    destruir_clones(numerador_a, denominador_a, numerador_b, denominador_b);
+    destruir_clones(numerador_a_clon, denominador_a_clon, numerador_b_clon, denominador_b_clon);
 
     if(racional_es_negativo(b)){
-        return calculadora_inverso(potencia);
+        racional_t *potencia_inversa = calculadora_inverso(potencia);
+        racional_destruir(potencia);
+        return potencia_inversa;
     }
     
     return potencia;
@@ -647,6 +663,7 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
             for(i = 0; i < cantidad_a_desapilar; i++){//caso en el que la cantidad de parametros sea distinta de 0
                 numeros_desapilados[i] = pila_desapilar(pila_aux);
                 if(numeros_desapilados[i] == NULL){
+                    destruir_numeros_desapilados(numeros_desapilados, MAX_CANT_PARAMETROS); //cCAMBIE ESTO
                     fprintf(stderr, "CANTIDAD INVALIDA DE PARAMETROS");
                     return NULL;
                 }
@@ -668,6 +685,7 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
                 racional_destruir(numeros_desapilados[k]);
            
             if(!pila_apilar(pila_aux, resultado_parcial)){ //apilo el resultado y sigo con el while
+                free(numeros_desapilados); 
                 free_all(NULL, pila_aux, aux);
                 racional_destruir(resultado_parcial);
                 fprintf(stderr, "ERROR APILANDO Y COMPUTANDO EL POSTFIJO");
@@ -675,6 +693,7 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
             }        
         }
     }
+    free(numeros_desapilados); //CAMBIE ESTO
 
     racional_t *resultado_final = pila_desapilar(pila_aux); 
     //si sigue habiendo elementos en la pila es porque hubo un error, chequeo eso
@@ -689,55 +708,165 @@ racional_t *resultado_computo_postfijo(cola_t *cola_postfijo){//como parametro m
     return resultado_final;
     
 }
+//FUNCIONES AUXILIARES PARA EL MAIN 
+
+bool imprimir_decimales(const racional_t *r, size_t decimales){ // e.g. 617/228, d = 2
+    entero_t *numerador = entero_clonar(racional_numerador(r)); // e.g. 617
+    // entero_t *denominador = racional_denominador(r); // e.g. 228
+    size_t digitos;
+    
+
+    if(decimales == 0){
+        entero_dividir(numerador, racional_denominador(r), NULL);
+        entero_imprimir(numerador); 
+        entero_destruir(numerador);
+        return true;
+    }
+
+    // x IR de racional_t numerador != denominador SIEMPRE
+    bool numerador_es_mayor = entero_comparar(numerador, racional_denominador(r)) > 0 ? true : false; 
+    
+    char bcd_diez[] = {0, 1};
+    entero_t *entero_diez = entero_desde_bcd(bcd_diez, 2);
+    if(entero_diez == NULL){
+        entero_destruir(numerador);
+        return false;
+    }
+    
+    for(size_t i = 0; i < decimales; i++) // obtengo 61700
+        entero_multiplicar(numerador, entero_diez);
+    entero_destruir(entero_diez); // ya no lo uso más
+    
+    entero_dividir(numerador, racional_denominador(r), NULL); // 61700 / 228 = 270 -> entero que contiene los digitos enteros y decimales del numero a imprimir.
+    char *bcd = entero_a_bcd(numerador, &digitos); // [0, 7, 2] lo convierto a bcd
+    entero_destruir(numerador); // ya no lo uso más
+    if(bcd == NULL)
+        return false;
+
+    if(numerador_es_mayor){
+       for(size_t i = digitos; i > decimales; i--) // imprime hasta donde empiezan los decimales
+            printf("%d", bcd[i - 1]);
+        printf(".");
+        for(size_t i = decimales; i > 0; i--) // imprime los decimales dsps del punto
+            printf("%d", bcd[i - 1]);
+    }
+    else{ // se imprime "0." seguido de tantos ceros como hagan falta hasta completar la "resolución" teniendo en cuenta que tienen que entrar todos los digitos del bcd 
+        printf("0."); 
+        for(size_t i = 0 ; i < (digitos - decimales); i++) // imprime
+            printf("%d", 0);
+        for(size_t i = digitos; i > 0; i--)
+            printf("%d", bcd[i - 1]);
+    }    
+    free(bcd);
+    return true;
+}
+
+bool es_numero(const char *s) {
+    if(s == NULL || *s == '\0') return false;
+
+    for(int i = 0; s[i] != '\0'; i++) {
+        if(!isdigit(s[i])) return false;
+    }
+
+    return true;
+}
 
 
-int main(){
+int main(int argc, char *argv[]){
+    int decimales = 8;
+    bool en_modo_racional = false;
+
+    if (argc > 2) {
+        fprintf(stderr, "Solo se puede ingresar: ./calculadora [OPCIONES]\n"
+                        "Para ver las opciones ingrese: ./calculadora ayuda\n");
+        return 1;
+    }
+
+    if (argc == 2) {
+        if (strcmp(argv[1], "ayuda") == 0) {
+            printf("Calculadora TA130\n"
+                   "Uso: ./calculadora [OPCIONES]\n"
+                   "OPCIONES:\n"
+                   "    ayuda: Muestra esta ayuda.\n"
+                   "    racional: Selecciona salida racional.\n"
+                   "    <n>: Salida con <n> dígitos de precisión.\n"
+                   "OPERADORES:\n"
+                   "    a+b: Suma\n"
+                   "    a-b: Resta\n"
+                   "    a*b: Multiplicación\n"
+                   "    a/b: División\n"
+                   "    a^b: Potencia entera\n"
+                   "    _a: Inverso aditivo\n"
+                   "    fact(a): Factorial\n"
+                   "    abs(a): Valor absoluto\n"
+                   "    inv(a): Inverso multiplicativo\n"
+                   "    pi: Número π\n"
+                   "    e: Número de Euler\n"
+                   "    phi: Número de oro\n");
+            return 0;
+        } else if (strcmp(argv[1], "racional") == 0) {
+            en_modo_racional = true;
+        } else if (es_numero(argv[1])) {
+            decimales = atoi(argv[1]);
+        } else {
+            fprintf(stderr, "Uso: ./calculadora [OPCIONES]\n"
+                            "OPCIONES:\n"
+                            "    ayuda: Muestra esta ayuda.\n"
+                            "    racional: Selecciona salida racional.\n"
+                            "    <n>: Salida con <n> dígitos de precisión.\n");
+            return 1;
+        }
+    }
+
     while(1){
+        
         char linea[MAX_LINEA];
-        printf("INGRESE UNA ENTRADA EN NOTACION INFIJA: \n");
-        fgets(linea, MAX_LINEA, stdin);
-
+        printf(">>>");
+        if (fgets(linea, MAX_LINEA, stdin) == NULL) {
+            break; // sale del while
+        }
         cola_t *cola_infija = cola_de_entrada(linea);
     
-        if(cola_infija == NULL){
-            printf("error al armar cola de entrada\n");
-            return 1;
-        }
-   
-    //voy a desencolar la cola en infija para chequear los resultados
-   // printf("COLA DE ENTRADA:\n");
-    /*
-    struct simbolo *elemento_cola_entrada;
-    while((elemento_cola_entrada = cola_desencolar(cola_infija)) != NULL){
-        printf("%s\n", elemento_cola_entrada->s);
-    }
-    */
-    //
+        if(cola_infija == NULL) return 1; // podriamos agregar esto --> printf("Error al armar cola de entrada\n");
+
         cola_t *cola_postfija = cola_de_salida(cola_infija);
         if(cola_postfija == NULL){
-            printf("error al armar cola de salida\n");
+            cola_destruir(cola_infija, free);
             return 1;
         }
-        // printf("COLA DE SALIDA:\n");
-        //
-        //
-        // struct simbolo *elemento_cola_salida;
-        // while((elemento_cola_salida = cola_desencolar(cola_postfija)) != NULL){
-        //     printf("%s\n", elemento_cola_salida->s);
-        //     free(elemento_cola_salida);
-        // }
-
+        cola_destruir(cola_infija, free);
 
         racional_t *r = resultado_computo_postfijo(cola_postfija);
-        racional_imprimir(r); printf("\n");
+        if(r == NULL){
+            cola_destruir(cola_postfija, free);
+            return 1;
+        }
         
-        
-        cola_destruir(cola_infija, free);
         cola_destruir(cola_postfija, free);
-
+        //
+        
+        //hasta aca tengo el resultado en modo racional
+        if(en_modo_racional){
+            if(!racional_imprimir(r)){
+                racional_destruir(r);
+                fprintf(stderr, "Error imprimiendo en modo racional\n");
+                return 1;
+            }
+        }
+        else{
+            if(!imprimir_decimales(r, decimales)){
+                racional_destruir(r);
+                fprintf(stderr, "Error imprimiendo en modo decimal\n");
+                return 1;
+            }
+        }
+            
+        racional_destruir(r);
         printf("\n");
         
+
     }
 
-        return 0;
+    return 0;
 }
+
