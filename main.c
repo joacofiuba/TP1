@@ -81,11 +81,6 @@ struct simbolo {
 
 
 
-
-
-
-
-
 // busqueda generica
 size_t cadena_a_enumerativo(const char *s, const char *opciones[], size_t cantidad){ //en cantidad mandarias CANT_OPERADORES o CANT_FUNCIONES
     for(size_t i = 0; i < cantidad; i++){
@@ -418,7 +413,7 @@ racional_t *calculadora_factorial(const racional_t *a){
 
     // Caso base: 0! = 1
     if(entero_comparar(cero, racional_numerador(a)) == 0){
-        racional_t *aux = racional_crear(false, entero_uno(), entero_uno());
+        racional_t *aux = racional_crear(false, uno, uno); //aca hay un cambio
         entero_destruir(uno);
         entero_destruir(cero);
         return aux;
@@ -437,7 +432,7 @@ racional_t *calculadora_factorial(const racional_t *a){
     }
     
 
-    racional_t *factorial = racional_crear(false, resultado, entero_uno());
+    racional_t *factorial = racional_crear(false, resultado, uno);
     entero_destruir(i);
     entero_destruir(a_clon);
     entero_destruir(resultado);
@@ -821,7 +816,7 @@ int main(int argc, char *argv[]){
     while(1){
         
         char linea[MAX_LINEA];
-        printf(">>>");
+        printf("INGRESE LA OPERACION>>>");
         if (fgets(linea, MAX_LINEA, stdin) == NULL) {
             break; // sale del while
         }
